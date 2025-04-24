@@ -24,7 +24,7 @@ function run_tests(specs){
 
 
 //-------------------------
-//      TOKEN
+//      String Literals
 //-------------------------
 const $_test = [
     {
