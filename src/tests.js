@@ -1,7 +1,7 @@
 function trace(v){ console.log(v); return v} //inline log for debugging
 
 import {
-    Scanner, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, log, tag
+    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, charset, log, tag
 } from "./parser.js";
 
 const compare_objects = (o1,o2) => JSON.stringify(o1) == JSON.stringify(o2);
@@ -10,8 +10,8 @@ function run_tests(specs){
     for (const [name, tests] of Object.entries(specs)) {
         const results = tests.map(
             test => {
-                const scanner = Scanner(test.string);
-                return test.assess(test.parser(scanner))
+                const cursor = Cursor(test.string);
+                return test.assess(test.parser(cursor))
             }
         );
 
@@ -32,19 +32,19 @@ const $_test = [
         string: "hello",
         assess: (result) => (
             !isError(result)
-            && result.scanner_end.position == 5
+            && result.cursor_end.position == 5
             && result.match == "hello"
         )
     },
     {
         parser: $("hello"),
         string: "world",
-        assess: (result) => isError(result) && result.scanner.position == 0
+        assess: (result) => isError(result) && result.cursor.position == 0
     },
     {
         parser: $("hello"),
         string: "hell",
-        assess: (result) => isError(result) && result.scanner.position == 4
+        assess: (result) => isError(result) && result.cursor.position == 4
     },
     {
         parser: $("car\nbook\nnoodle\npig"),
@@ -65,22 +65,22 @@ const either_test = [
     {
         parser: either($("hello"), $("world")),
         string: "hello",
-        assess: (result) => !isError(result) && result.scanner_end.position == 5
+        assess: (result) => !isError(result) && result.cursor_end.position == 5
     },
     {
         parser: either($("hello"), $("world!")),
         string: "world!",
-        assess: (result) => !isError(result) && result.scanner_end.position == 6
+        assess: (result) => !isError(result) && result.cursor_end.position == 6
     },
     {
         parser: either($("hello"), $("world")),
         string: "goodby",
-        assess: (result) => isError(result) && result.scanner.position == 0
+        assess: (result) => isError(result) && result.cursor.position == 0
     },
     {
         parser: either($("abcd*"), $("abc*"), $("abcde*")),
         string: "abcdefg",
-        assess: (result) => isError(result) && result.scanner.position == 3
+        assess: (result) => isError(result) && result.cursor.position == 3
     },
     {
         parser: either($("000100"), $("001000"), $("000001")),
@@ -112,7 +112,7 @@ const not_test = [
     {
         parser: not(either($("dog"), $("cat"), $("pig"))),
         string: "candotpigzoo",
-        assess: (result) => result.match == "candot" && result.scanner_end.position == 6
+        assess: (result) => result.match == "candot" && result.cursor_end.position == 6
     },
     {
         parser: not(either($('..x...'), $('....x...'), $('...x'))),
@@ -143,7 +143,7 @@ const option_test = [
     {
         parser: option($("hello")),
         string: "world",
-        assess: (result) => result.scanner_start == result.scanner_end
+        assess: (result) => result.cursor_start == result.cursor_end
     },
 ];
 
@@ -210,7 +210,7 @@ const repeat_test = [
     {
         parser: repeat(0)($("abc")),
         string: "xyz",
-        assess: (result) => !isError(result) && result.scanner_start == result.scanner_end
+        assess: (result) => !isError(result) && result.cursor_start == result.cursor_end
     },
     {
         parser: repeat()($("abc")),
@@ -282,21 +282,21 @@ const line_and_column = [
     {
         parser: not($('end')),
         string: 'once upon\n a time \nthere was\n the end',
-        assess: (result) => result.scanner_end.line == 3 && result.scanner_end.column == 5
+        assess: (result) => result.cursor_end.line == 3 && result.cursor_end.column == 5
     },
     {
         parser: repeat(1)(either($("hello!"), $("world!"), $("goodby?"), $('\n'))),
         string: "\nhello!hello!\nworld!\nhello!goodby?Oooops!",
-        assess: (result) => !isError(result) && result.scanner_end.line == 3 && result.scanner_end.column == 13
+        assess: (result) => !isError(result) && result.cursor_end.line == 3 && result.cursor_end.column == 13
     },
     {
         parser: sequence(repeat(0,10)(either($("<->"), $("{-}"), $('\n'))),$('missing part')),
         string: "<->\n<->{-}\n{-}\n<->\n{-}...!",
         assess: (result) => (
             isError(result)
-            && result.scanner.position == 22
-            && result.scanner.line == 4
-            && result.scanner.column == 3
+            && result.cursor.position == 22
+            && result.cursor.line == 4
+            && result.cursor.column == 3
         )
     },      
 ];
@@ -353,11 +353,11 @@ const capture_test = [
 //-------------------------
 //      MAP
 //-------------------------
-const digits = repeat()(
+const num_digits = repeat()(
     either(...[1,2,3,4,5,6,7,8,9,0,'.'].map(v => $(v.toString())))
 )
 
-const get_number = map(Number)(capture(digits));
+const get_number = map(Number)(capture(num_digits));
 const list = seperator => parser => sequence(parser, option(seperator));
 const backets = (left, right) => parser => sequence(left, parser,right);
 const angle_brackets = backets($("<"), $(">"));
@@ -417,6 +417,35 @@ const map_test = [
     }
 ];
 
+
+// const sign = charset("-", "+");
+// const zero = $('0');
+// const onenine = charset("1","2","3","4","5","6","7","8","9")
+// const digit = charset("0","1","2","3","4","5","6","7","8","9");
+// const digits = repeat()(onenine);
+// const intiger = sequence(option(sign),log(onenine), option(digits));
+
+// const fraction = sequence($("."), digits);
+// const number = sequence(sign, digits,  digits, option(fraction));
+
+// const intiger_test = [
+//     {
+//         parser: intiger,
+//         string: "1",
+//         assess: (result) => !isError(result),
+//     },
+//     {
+//         parser: intiger,
+//         string: "01",
+//         assess: (result) => isError(result),
+//     },
+//     {
+//         parser: intiger,
+//         string: "+0",
+//         assess: (result) => !isError(result),
+//     }
+// ]
+
 const run_all_tests = () => run_tests(
     {
         ["$"]:$_test,
@@ -427,7 +456,8 @@ const run_all_tests = () => run_tests(
         ["repeat"]: repeat_test,
         ["combined"]: combined_test,
         ["capture"]: capture_test,
-        ["map"]: map_test
+        ["map"]: map_test,
+ //       ["intiger"]: intiger_test
     }
 )
 

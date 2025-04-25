@@ -1,141 +1,119 @@
 function trace(v){ console.log(v); return v} //inline log for debugging
 
-const ParseError = (error, scanner) => ({
-    error, scanner
+const ParseError = (error, cursor) => ({
+    error, cursor
 })
 
 const isError = result => "error" in result;
 
-const SUCCESS = Symbol('SUCCESS');
-const FAIL = Symbol('FAIL');
-const ANY = Symbol('ANY');
-
-const ScannerProto = {
-    accept(criterion){
-        if(this.position === this.string.length){
-            return FAIL;
-        }
-        const ch = this.string.charAt(this.position);
-        
-        if(criterion ==  ch || (criterion instanceof Function && criterion(ch))){
-            this.position++;
-            return SUCCESS;
-        }else{
-            return FAIL;
-        }
-    }
+const CursorProto = {
+    advance(n=1) { return Cursor(this.string, this.position + n) },
+    get current_char(){ return this.string.charAt(this.position) }
 }
 
-const Scanner = (string, position=0) => ({
-    __proto__: ScannerProto,
-    string,
-    position   
-})
+const Cursor = (string, position=0) => ({__proto__: CursorProto, string, position })
 
 const EMPTY = Symbol('EMPTY');
 const ResultProto = {
     get match(){
-        return this.scanner_end.string.slice(this.scanner_start.position, this.scanner_end.position);
-    },
-    with_value(value){
-        return Result(this.scanner_start, this.scanner_end, value)
+        return this.cursor_end.string.slice(this.cursor_start.position, this.cursor_end.position);
     }
 }
 
-const Result = (scanner_start, scanner_end, value = EMPTY) =>  ({
-    __proto__: ResultProto, scanner_start, scanner_end, value:value,
+const Result = (cursor_start, cursor_end, value = EMPTY) =>  ({
+    __proto__: ResultProto, cursor_start, cursor_end, value:value,
 });
 
-const $ = string => scanner => {
-    const working_scanner = Scanner(scanner.string, scanner.position);
+const $ = string => cursor => {
+    const working_cursor = Cursor(cursor.string, cursor.position);
     for(let i=0; i < string.length; i++){
-        const result = working_scanner.accept(string.charAt(i));
+        //const result = working_cursor.accept(string.charAt(i));
 
-        if(result == FAIL){
-            return ParseError("syntax error", working_scanner);
+        if(string.charAt(i) === working_cursor.string.charAt(working_cursor.position)){
+            working_cursor.position++;
+        }else{
+            return ParseError("syntax error", working_cursor);
         }
     } 
 
-    return Result(scanner, working_scanner);
+    return Result(cursor, working_cursor);
 }
 
-const apply = predicate => scanner => {
-    const working_scanner = Scanner(scanner.string, scanner.position);
-    const result = working_scanner.accept(predicate);
-    return (
-        (result == FAIL)
-        ? ParseError("syntax error", scanner)
-        : Result(scanner, working_scanner)
-    )
-}
+const apply_predicate = predicate => cursor => (
+    predicate(cursor.current_char)
+    ? Result(cursor, cursor.advance())
+    : ParseError("syntax error", cursor)
+)
 
-const code = ch => ch.charCodeAt(0)
 const mapchar = f => ch => f(ch.charCodeAt(0))
 
-const WRD = apply(
+const WRD = apply_predicate(
     mapchar(
         ch =>  (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122)
     )
 )
 
-const DIG = apply(
+const DIG = apply_predicate(
     mapchar(
         ch => (ch >= 48 && ch <= 57)
     )
 )
 
-const WSP = apply(
+const WSP = apply_predicate(
     mapchar(
         ch => (ch >= 9 && ch <= 13) || ch == 32
     )
 )
 
+const charset = (...chars) => apply_predicate(
+    ch => chars.indexOf(ch) >= 0
+)
 
-const either = (...parsers) => scanner => {
-    let min_scanner = false;
+const either = (...parsers) => cursor => {
+    let min_cursor = false;
     for(let p of parsers){
-        const result = p(scanner);
+        const result = p(cursor);
         if(isError(result)){
-            min_scanner = (
-                (!min_scanner)
-                ? result.scanner
-                : (result.scanner.position < min_scanner.position)
-                ? result.scanner
-                : min_scanner
+            min_cursor = (
+                (!min_cursor)
+                ? result.cursor
+                : (result.cursor.position < min_cursor.position)
+                ? result.cursor
+                : min_cursor
             )
         }else{
             return result;
         }
     }
-    return ParseError("syntax error " + min_scanner.position, min_scanner);
+    return ParseError("syntax error " + min_cursor.position, min_cursor);
 }
 
-const not = parser => scanner => {
-    const working_scanner = Scanner(scanner.string, scanner.position);
-    let result = parser(working_scanner);
+const not = parser => cursor => {
+    const working_cursor = Cursor(cursor.string, cursor.position);
+    let result = parser(working_cursor);
 
     while(isError(result)){
-        if((result.scanner.position) < result.scanner.string.length){
-            working_scanner.position++;
+        if((result.cursor.position) < result.cursor.string.length){
+            working_cursor.position++;
         }else{
             break;
         }
-        result = parser(working_scanner);
+        result = parser(working_cursor);
     }
 
-    return Result(scanner, isError(result) ? result.scanner : result.scanner_start);
+    return Result(cursor, isError(result) ? result.cursor : result.cursor_start);
 }
 
-const option = parser => scanner => {
-    const result = parser(scanner);
-    return isError(result) ? Result(scanner, scanner) : result;
+const option = parser => cursor => {
+    const result = parser(cursor);
+    return isError(result) ? Result(cursor, cursor) : result;
 }
 
-const sequence = (...parsers) => scanner => {
+const sequence = (...parsers) => cursor => {
     let value = EMPTY;
-    let current_scanner = scanner;
+    let current_cursor = cursor;
     for(let p of parsers){
-        const result = p(current_scanner);
+        const result = p(current_cursor);
         
         if(isError(result)){
             return result;
@@ -144,63 +122,63 @@ const sequence = (...parsers) => scanner => {
             value.push(result.value);
         }
 
-        current_scanner = result.scanner_end
+        current_cursor = result.cursor_end
     }
 
-    return Result(scanner, current_scanner, value);
+    return Result(cursor, current_cursor, value);
 }
 
 const MAX = 10000;
 
-const repeat = (min = 1, max = MAX) => parser => scanner => {
-    let current_scanner = scanner;
+const repeat = (min = 1, max = MAX) => parser => cursor => {
+    let current_cursor = cursor;
     let value = EMPTY;
 
     //we use global Max (not local max) to allow for overflow errors
     for(let rep = 0; rep < MAX; rep++){
         if(rep > max){
-            return ParseError("repeat over max error", current_scanner);
+            return ParseError("repeat over max error", current_cursor);
         }
 
-        if(current_scanner.position >= current_scanner.string.length){
+        if(current_cursor.position >= current_cursor.string.length){
             if(rep < min ){
-                return ParseError("repeat under min error", current_scanner);
+                return ParseError("repeat under min error", current_cursor);
             }else{
-                return Result(scanner, current_scanner, value);
+                return Result(cursor, current_cursor, value);
             }
         }
 
-        const result = parser(current_scanner);
+        const result = parser(current_cursor);
         if(isError(result)){
             return (
                 (rep < min)
                 ? result //propagate the error
-                : Result(scanner, current_scanner, value) //supress the error
+                : Result(cursor, current_cursor, value) //supress the error
             );
         }else if (max <= 0){
-            return ParseError("syntax error", current_scanner);
+            return ParseError("syntax error", current_cursor);
         }else if(result.value != EMPTY){
             value = (value == EMPTY) ? [] : value;
             value.push(result.value);
         }
 
-        current_scanner = result.scanner_end
+        current_cursor = result.cursor_end
     }
 }
 
-const capture = parser => scanner => {
-    const result = parser(scanner);
+const capture = parser => cursor => {
+    const result = parser(cursor);
     return (
         isError(result)
         ? result
-        : result.with_value(result.match)
+        : Result(result.cursor_start, result.cursor_end, result.match)
     )
 }
 
-const log = parser => scanner => trace(parser(scanner));
+const log = parser => cursor => trace(parser(cursor));
 
-const map = f => parser => scanner => {
-    const result = parser(scanner);
+const map = f => parser => cursor => {
+    const result = parser(cursor);
     return (
         (isError(result) || (result.value == EMPTY))
         ? result
@@ -213,5 +191,5 @@ const tag = label => map(
 )
 
 export {
-    Scanner, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, DIG, WSP, tag
+    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, DIG, WSP, charset, tag
 };
