@@ -9,9 +9,16 @@ const compare_objects = (o1,o2) => JSON.stringify(o1) == JSON.stringify(o2);
 function run_tests(specs){
     for (const [name, tests] of Object.entries(specs)) {
         const results = tests.map(
-            test => {
+            (test, i) => {
                 const cursor = Cursor(test.string);
-                return test.assess(test.parser(cursor))
+                let test_result = false;
+                try{
+                    test_result = test.assess(test.parser(cursor))
+                }catch(e){
+                    trace(name + ":" + "Error at test " + i);
+                    trace(e);
+                }
+                return test_result
             }
         );
 
@@ -39,12 +46,12 @@ const $_test = [
     {
         parser: $("hello"),
         string: "world",
-        assess: (result) => isError(result) && result.cursor.position == 0
+        assess: (result) => isError(result) && result.position == 0
     },
     {
         parser: $("hello"),
         string: "hell",
-        assess: (result) => isError(result) && result.cursor.position == 4
+        assess: (result) => isError(result) && result.position == 4
     },
     {
         parser: $("car\nbook\nnoodle\npig"),
@@ -75,12 +82,12 @@ const either_test = [
     {
         parser: either($("hello"), $("world")),
         string: "goodby",
-        assess: (result) => isError(result) && result.cursor.position == 0
+        assess: (result) => isError(result) && result.position == 0
     },
     {
         parser: either($("abcd*"), $("abc*"), $("abcde*")),
         string: "abcdefg",
-        assess: (result) => isError(result) && result.cursor.position == 3
+        assess: (result) => isError(result) && result.position == 3
     },
     {
         parser: either($("000100"), $("001000"), $("000001")),
@@ -294,9 +301,9 @@ const line_and_column = [
         string: "<->\n<->{-}\n{-}\n<->\n{-}...!",
         assess: (result) => (
             isError(result)
-            && result.cursor.position == 22
-            && result.cursor.line == 4
-            && result.cursor.column == 3
+            && result.position == 22
+            && result.line == 4
+            && result.column == 3
         )
     },      
 ];
