@@ -8,7 +8,8 @@ const isError = result => "error" in result;
 
 const CursorProto = {
     advance(n=1) { return Cursor(this.string, this.position + n) },
-    get current_char(){ return this.string.charAt(this.position) }
+    get current_char(){ return this.string.charAt(this.position) },
+    get remaining(){ return this.string.length - this.position}
 }
 
 const Cursor = (string, position=0) => ({__proto__: CursorProto, string, position })
@@ -63,6 +64,10 @@ const WSP = apply_predicate(
     mapchar(
         ch => (ch >= 9 && ch <= 13) || ch == 32
     )
+)
+
+const END = apply_predicate(
+    ch => ch == ""
 )
 
 const charset = (...chars) => apply_predicate(
@@ -191,5 +196,5 @@ const tag = label => map(
 )
 
 export {
-    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, DIG, WSP, charset, tag
+    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag
 };

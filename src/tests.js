@@ -418,34 +418,6 @@ const map_test = [
 ];
 
 
-// const sign = charset("-", "+");
-// const zero = $('0');
-// const onenine = charset("1","2","3","4","5","6","7","8","9")
-// const digit = charset("0","1","2","3","4","5","6","7","8","9");
-// const digits = repeat()(onenine);
-// const intiger = sequence(option(sign),log(onenine), option(digits));
-
-// const fraction = sequence($("."), digits);
-// const number = sequence(sign, digits,  digits, option(fraction));
-
-// const intiger_test = [
-//     {
-//         parser: intiger,
-//         string: "1",
-//         assess: (result) => !isError(result),
-//     },
-//     {
-//         parser: intiger,
-//         string: "01",
-//         assess: (result) => isError(result),
-//     },
-//     {
-//         parser: intiger,
-//         string: "+0",
-//         assess: (result) => !isError(result),
-//     }
-// ]
-
 const run_all_tests = () => run_tests(
     {
         ["$"]:$_test,
@@ -456,8 +428,7 @@ const run_all_tests = () => run_tests(
         ["repeat"]: repeat_test,
         ["combined"]: combined_test,
         ["capture"]: capture_test,
-        ["map"]: map_test,
- //       ["intiger"]: intiger_test
+        ["map"]: map_test
     }
 )
 
