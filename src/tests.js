@@ -15,7 +15,7 @@ function run_tests(specs){
                 try{
                     test_result = test.assess(test.parser(cursor))
                 }catch(e){
-                    trace(name + ":" + "Error at test " + i);
+                    trace(name + ":" + "Error at test " + (i+1));
                     trace(e);
                 }
                 return test_result
@@ -39,7 +39,7 @@ const $_test = [
         string: "hello",
         assess: (result) => (
             !isError(result)
-            && result.cursor_end.position == 5
+            && result.end_position == 5
             && result.match == "hello"
         )
     },
@@ -72,12 +72,12 @@ const either_test = [
     {
         parser: either($("hello"), $("world")),
         string: "hello",
-        assess: (result) => !isError(result) && result.cursor_end.position == 5
+        assess: (result) => !isError(result) && result.end_position == 5
     },
     {
         parser: either($("hello"), $("world!")),
         string: "world!",
-        assess: (result) => !isError(result) && result.cursor_end.position == 6
+        assess: (result) => !isError(result) && result.end_position == 6
     },
     {
         parser: either($("hello"), $("world")),
@@ -119,7 +119,7 @@ const not_test = [
     {
         parser: not(either($("dog"), $("cat"), $("pig"))),
         string: "candotpigzoo",
-        assess: (result) => result.match == "candot" && result.cursor_end.position == 6
+        assess: (result) => result.match == "candot" && result.end_position == 6
     },
     {
         parser: not(either($('..x...'), $('....x...'), $('...x'))),
@@ -139,7 +139,7 @@ const not_test = [
 ];
 
 //-------------------------
-//      NOT
+//      OPTION
 //-------------------------
 const option_test = [
     {
@@ -217,7 +217,7 @@ const repeat_test = [
     {
         parser: repeat(0)($("abc")),
         string: "xyz",
-        assess: (result) => !isError(result) && result.cursor_start == result.cursor_end
+        assess: (result) => !isError(result) && result.start_position == result.end_position
     },
     {
         parser: repeat()($("abc")),

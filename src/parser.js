@@ -17,12 +17,12 @@ const Cursor = (string, position=0) => ({__proto__: CursorProto, string, positio
 const EMPTY = Symbol('EMPTY');
 const ResultProto = {
     get match(){
-        return this.string.slice(this.cursor_start.position, this.cursor_end.position);
+        return this.string.slice(this.start_position, this.end_position);
     }
 }
 
-const Result = (string, cursor_start, cursor_end, value = EMPTY) =>  ({
-    __proto__: ResultProto, string, cursor_start, cursor_end, value:value,
+const Result = (string, start_position, end_position, value = EMPTY) =>  ({
+    __proto__: ResultProto, string, start_position, end_position, value:value,
 });
 
 const $ = string => cursor => {
@@ -35,12 +35,12 @@ const $ = string => cursor => {
         }
     } 
 
-    return Result(cursor.string, cursor, working_cursor);
+    return Result(cursor.string, cursor.position, working_cursor.position);
 }
 
 const apply_predicate = predicate => cursor => (
     predicate(cursor.current_char)
-    ? Result(cursor.string, cursor, cursor.advance())
+    ? Result(cursor.string, cursor.position, cursor.position + 1)
     : ParseError(cursor.string, "syntax error", cursor.position)
 )
 
@@ -99,20 +99,19 @@ const not = parser => cursor => {
         result = parser(working_cursor);
     }
 
-    return Result(cursor.string, cursor, isError(result) ? Cursor(result.string, result.position) : result.cursor_start);
+    return Result(cursor.string, cursor.position, isError(result) ? result.position : result.start_position);
 }
 
 const option = parser => cursor => {
     const result = parser(cursor);
-    return isError(result) ? Result(cursor.string, cursor, cursor) : result;
+    return isError(result) ? Result(cursor.string, cursor.position, cursor.position) : result;
 }
 
 const sequence = (...parsers) => cursor => {
     let value = EMPTY;
-    let current_cursor = cursor;
+    let current_cursor = Cursor(cursor.string, cursor.position);
     for(let p of parsers){
         const result = p(current_cursor);
-        
         if(isError(result)){
             return result;
         }else if(result.value != EMPTY){
@@ -120,16 +119,16 @@ const sequence = (...parsers) => cursor => {
             value.push(result.value);
         }
 
-        current_cursor = result.cursor_end
+        current_cursor.position = result.end_position
     }
 
-    return Result(cursor.string, cursor, current_cursor, value);
+    return Result(cursor.string, cursor.position, current_cursor.position, value);
 }
 
 const MAX = 10000;
 
 const repeat = (min = 1, max = MAX) => parser => cursor => {
-    let current_cursor = cursor;
+    let current_cursor = Cursor(cursor.string, cursor.position);
     let value = EMPTY;
 
     //we use global Max (not local max) to allow for overflow errors
@@ -142,7 +141,7 @@ const repeat = (min = 1, max = MAX) => parser => cursor => {
             if(rep < min ){
                 return ParseError(current_cursor.string, "repeat under min error", current_cursor.position);
             }else{
-                return Result(cursor.string, cursor, current_cursor, value);
+                return Result(cursor.string, cursor.position, current_cursor.position, value);
             }
         }
 
@@ -151,7 +150,7 @@ const repeat = (min = 1, max = MAX) => parser => cursor => {
             return (
                 (rep < min)
                 ? result //propagate the error
-                : Result(cursor.string, cursor, current_cursor, value) //supress the error
+                : Result(cursor.string, cursor.position, current_cursor.position, value) //supress the error
             );
         }else if (max <= 0){
             return ParseError(current_cursor.string, "syntax error", current_cursor.position);
@@ -160,7 +159,7 @@ const repeat = (min = 1, max = MAX) => parser => cursor => {
             value.push(result.value);
         }
 
-        current_cursor = result.cursor_end
+        current_cursor.position = result.end_position
     }
 }
 
@@ -169,7 +168,7 @@ const capture = parser => cursor => {
     return (
         isError(result)
         ? result
-        : Result(cursor.string, result.cursor_start, result.cursor_end, result.match)
+        : Result(cursor.string, result.start_position, result.end_position, result.match)
     )
 }
 
