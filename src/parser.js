@@ -7,9 +7,9 @@ const ParseError = (string, error, position) => ({
 const isError = result => "error" in result;
 
 const CursorProto = {
-    advance(n=1) { return Cursor(this.string, this.position + n) },
     get current_char(){ return this.string.charAt(this.position) },
-    get remaining(){ return this.string.length - this.position}
+    get remaining(){ return this.string.length - this.position},
+    clone(){ return Cursor(this.string, this.position)}
 }
 
 const Cursor = (string, position=0) => ({__proto__: CursorProto, string, position })
@@ -26,7 +26,7 @@ const Result = (string, start_position, end_position, value = EMPTY) =>  ({
 });
 
 const $ = string => cursor => {
-    const working_cursor = Cursor(cursor.string, cursor.position);
+    const working_cursor = cursor.clone();
     for(let i=0; i < string.length; i++){
         if(string.charAt(i) === working_cursor.string.charAt(working_cursor.position)){
             working_cursor.position++;
@@ -87,7 +87,7 @@ const either = (...parsers) => cursor => {
 }
 
 const not = parser => cursor => {
-    const working_cursor = Cursor(cursor.string, cursor.position);
+    const working_cursor = cursor.clone();
     let result = parser(working_cursor);
 
     while(isError(result)){
@@ -109,7 +109,7 @@ const option = parser => cursor => {
 
 const sequence = (...parsers) => cursor => {
     let value = EMPTY;
-    let current_cursor = Cursor(cursor.string, cursor.position);
+    let current_cursor = cursor.clone();
     for(let p of parsers){
         const result = p(current_cursor);
         if(isError(result)){
@@ -128,7 +128,7 @@ const sequence = (...parsers) => cursor => {
 const MAX = 10000;
 
 const repeat = (min = 1, max = MAX) => parser => cursor => {
-    let current_cursor = Cursor(cursor.string, cursor.position);
+    let current_cursor = cursor.clone();
     let value = EMPTY;
 
     //we use global Max (not local max) to allow for overflow errors

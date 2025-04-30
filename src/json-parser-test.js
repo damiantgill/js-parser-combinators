@@ -1,11 +1,58 @@
-
-function trace(v){ console.log(v); return v} //inline log for debugging
-
 import {
     Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, END, charset, apply_predicate, mapchar, log, tag
 } from "./parser.js";
 
-const compare_objects = (o1,o2) => JSON.stringify(o1) == JSON.stringify(o2);
+import {
+    json_string, integer, number, json_value, json_array_parser
+} from "./json-parser.js";
+
+function trace(v){ console.log(v); return v} //inline log for debugging
+
+const isScalar = (object) => object == null || typeof object != "object";
+
+function  value_compare(value1, value2){
+    if(isScalar(value1) != isScalar(value2)) return false;
+
+    if(isScalar(value1) && isScalar(value2)) return value1 === value2;
+
+    const o1_keys = Object.keys(value1);
+    const o2_keys = Object.keys(value2);
+    if(o1_keys.length != o2_keys.length) return false;
+
+    for (var key of o1_keys){
+        if(!value_compare(value1[key], value2[key])) return false;
+    }
+
+    return true;
+}
+
+
+const isDeepEqual = (object1, object2) => {
+
+    const objKeys1 = Object.keys(object1);
+    const objKeys2 = Object.keys(object2);
+  
+    if (objKeys1.length !== objKeys2.length) return false;
+  
+    for (var key of objKeys1) {
+      const value1 = object1[key];
+      const value2 = object2[key];
+  
+      const isObjects = isObject(value1) && isObject(value2);
+  
+      if ((isObjects && !isDeepEqual(value1, value2)) ||
+        (!isObjects && value1 !== value2)
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+  
+  const isObject = (object) => {
+    return object != null && typeof object === "object";
+  };
+
 
 function run_tests(specs){
     for (const [name, tests] of Object.entries(specs)) {
@@ -31,68 +78,6 @@ function run_tests(specs){
     }
 }
 
-const one_to_nine = ["1","2","3","4","5","6","7","8","9"]
-const zero = $('0');
-const sign = charset("-", "+");
-const onenine = charset(...one_to_nine)
-const digit = charset("0",...one_to_nine);
-const hex = charset("0",...one_to_nine,"a","A","b","B", "c", "C", "d", "D", "e", "E", "F","f");
-const digits = repeat()(digit);
-const intiger = either(
-    sequence(option(sign), zero),
-    sequence(option(sign), onenine, option(digits))
-)
-const fraction = sequence($("."), digits);
-const exponent = sequence(charset('E','e'),intiger)
-const number = map(Number)(capture(sequence(intiger, option(fraction), option(exponent))));
-
-//const list = (left_bracket, seperator, right_bracket) => parser => sequence(left_bracket, repeat(), right_bracket);
-
-const string_uchars = apply_predicate(mapchar( ch => (ch >= 32 && ch <= 1114111) && ch != 92 && ch != 34));
-const string_chars = either(
-    string_uchars,
-    $('\\\\'),
-    $('\\"'),
-    $('\\/'),
-    $('\\b'),
-    $('\\f'),
-    $('\\n'),
-    $('\\r'),
-    $('\\t'),
-    sequence($('\\u'),hex, hex, hex, hex)
-)
-
-const wrap = (left,right) => parser => map(v=>v[0])(sequence(left, parser, right));
-const spaces = repeat(0)(WSP);
-
-const quotes = wrap($('"'), $('"'));
-
-const json_string = capture(repeat(0)(string_chars));
-const quote_string = 1;
-
-wrap(sequence(spaces,$('"')), capture(json_string), sequence($('"'), spaces));
-
-const json_value = either(
-    quotes(json_string),
-    number
-)
-
-const element = wrap(spaces,spaces)(json_value)
-
-const list = seperator => parser => map(v=>v.flat(2))(sequence(parser, repeat(0)(sequence(seperator, parser))))
-
-const comma_list = list($(','))(element);
-
-trace(comma_list(Cursor(" 1123345.001  ,742,2011 , \" asdasdas ddd d\" ,  1500  ")).value)
-
-const list_test = [
-    {
-        parser: sequence(comma_list, END),
-        string: "12345,678,11500",
-        assess: (result) => trace(result.value),
-    }
-]
-
 const string_test = [
     {
         parser: sequence(json_string,END),
@@ -113,29 +98,17 @@ const string_test = [
 
 const intiger_test = [
     {
-        parser: sequence(intiger,END),
+        parser: sequence(integer,END),
         string: ["1","0","11", "+0", "+1", "-0", "-2", "+514324", "-972611000"],
         assess: (result) => !isError(result),
     },
     {
-        parser: sequence(intiger,END),
+        parser: sequence(integer,END),
         string: ["01","-001", "+0014", "abc", "-cde"],
         assess: (result) => isError(result)
     }
 ]
 
-const compare_list = (l1,l2) => {
-    if(l1.length != l2.length){
-        return false
-    }
-
-    for(let i=0; i < l1.length; i++){
-        if(l1[i] != l2[i]){
-            return false;
-        }
-    }
-    return true;
-}
 const number_test = [
     {
         parser: sequence(number,END),
@@ -143,7 +116,7 @@ const number_test = [
         assess: (result) => !isError(result),
     },
     {
-        parser: sequence(intiger,END),
+        parser: sequence(integer,END),
         string: ["01","-001", "+0014", "abc", "-cde"],
         assess: (result) => isError(result)
     },
@@ -161,20 +134,52 @@ const number_test = [
         parser: sequence(number,END),
         string: ["100.0016E15","100.0016e15","0.00012e768","0.000E0","0.1751e101", "916E101", "1e175"],
         assess: (result) => !isError(result)
+    }
+]
+
+
+const compare_list = (l1,l2) => {
+    if(l1.length != l2.length){
+        return false
+    }
+
+    for(let i=0; i < l1.length; i++){
+        if(l1[i] != l2[i]){
+            return false;
+        }
+    }
+    return true;
+}
+
+const array_test = [
+    {
+        parser: json_array_parser,
+        string: "[100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175]",
+        assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
     },
     {
-        parser: list($(','))(number),
-        string: "100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175",
-        assess: (result) => compare_list(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
-    }
+        parser: json_array_parser,
+        string: "[  100.0016E15 , 100.0016e15 , 0.00012e76,0.000, 0.1751,916E11,1e175  ]",
+        assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
+    },
+    {
+        parser: json_array_parser,
+        string: '["hello ", "   ",  "world",  1527, "}[]dsdid<>@#%^&&**(()_+", 973.15, "  __  ", 768.001e27 ]',
+        assess: (result) => value_compare(result.value, ["hello ", "   ", "world",  1527, "}[]dsdid<>@#%^&&**(()_+", 973.15, "  __  ", 768.001e27 ])
+    },
+    {
+        parser: json_array_parser,
+        string: '[1, 2, 3, [11, 12] , 5]',
+        assess: (result) => value_compare(result.value, [1, 2, 3, [11, 12] , 5])
+    }   
 ]
 
 const run_json_tests = () => run_tests(
     {
         ["intiger"]: intiger_test,
         ["number_test"]: number_test,
-        ["string_test"]: string_test
-       // ["list_test"] : list_test
+        ["string_test"]: string_test,
+        ["array_test"] : array_test
     }
 )
 

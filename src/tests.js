@@ -1,9 +1,8 @@
-function trace(v){ console.log(v); return v} //inline log for debugging
-
 import {
     Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, charset, log, tag
 } from "./parser.js";
 
+function trace(v){ console.log(v); return v} //inline log for debugging
 const compare_objects = (o1,o2) => JSON.stringify(o1) == JSON.stringify(o2);
 
 function run_tests(specs){
