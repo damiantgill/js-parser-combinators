@@ -1,10 +1,6 @@
-import {
-    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, END, charset, apply_predicate, mapchar, log, tag
-} from "./parser.js";
-
-import {
-    json_string, integer, number, json_value, json_array_parser
-} from "./json-parser.js";
+import {Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log} from "./parser.js";
+import {apply_predicate, mapchar, WRD, WSP, END, charset} from "./parser-helpers.js";
+import {json_string, integer, number, json_value, json_array, member, json_object} from "./json-parser.js";
 
 function trace(v){ console.log(v); return v} //inline log for debugging
 
@@ -144,8 +140,6 @@ const number_test = [
 
 
 const compare_list = (l1,l2) => {
-    //trace(l1)
-    //trace(l1.length)
     if(l1.length != l2.length){
         return false
     }
@@ -160,83 +154,113 @@ const compare_list = (l1,l2) => {
 
 const array_test = [
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[1,2,3,4,5]",
         assess: (result) => compare_list(result.value, [1,2,3,4,5])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[ ]",
         assess: (result) => value_compare(result.value, [ ])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[[1]]",
         assess: (result) => value_compare(result.value, [[1]])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[ 1 , [] ]",
         assess: (result) => value_compare(result.value, [1,[]])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[ [], 1 ]",
         assess: (result) => value_compare(result.value, [[],1])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[[]]",
         assess: (result) => value_compare(result.value, [[]])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[[[]]]",
         assess: (result) => value_compare(result.value, [[[]]])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[[],[[]],[[],[]]]",
         assess: (result) => value_compare(result.value, [[], [[]], [[],[]]])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175]",
         assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: "[  100.0016E15 , 100.0016e15 , 0.00012e76,0.000, 0.1751,916E11,1e175  ]",
         assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: '["hello ", "   ",  "world",  1527, "}[]dsdid<>@#%^&&**(()_+", 973.15, "  __  ", 768.001e27 ]',
         assess: (result) => value_compare(result.value, ["hello ", "   ", "world",  1527, "}[]dsdid<>@#%^&&**(()_+", 973.15, "  __  ", 768.001e27 ])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: '[1, 2, 3, [11, 12] , 5]',
         assess: (result) => value_compare(result.value, [1, 2, 3, [11, 12] , 5])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: '[]',
         assess: (result) => value_compare(result.value, [])
     },
     {
-        parser: json_array_parser,
+        parser: json_array,
         string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] ,"🙃", 5]',
         assess: (result) => value_compare(result.value, ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , "🙃", 5])
     }   
 ]
 
+const object_test = [
+    {
+        parser: json_object,
+        string: `{"name":"Marge", "age":32, "weight":127.307}`,
+        assess: (result) => value_compare(result.value, {name:"Marge", age:32, weight:127.307})
+    },
+    {
+        parser: json_object,
+        string: `{
+            "name":"Marge",
+            "address":{"street":"hilcrest drive", "number":2256},
+            "grades":[{   "score" :"A", "section":124},{"score":"C+", "section":556},{"score":"-A", "section":238}],
+            "age":32,
+            "weight":127.307
+        }`,
+        assess: (result) => (
+            value_compare(
+                result.value, {
+                    "name":"Marge",
+                    "address":{"street":"hilcrest drive", "number":2256},
+                    "grades":[{"score":"A", "section":124},{"score":"C+", "section":556},{"score":"-A", "section":238}],
+                    "age":32,
+                    "weight":127.307
+                }
+            )
+        )
+    }
+];
+
 const run_json_tests = () => run_tests(
     {
-        // ["intiger"]: intiger_test,
-        // ["number_test"]: number_test,
+        ["intiger"]: intiger_test,
+        ["number_test"]: number_test,
         ["string_test"]: string_test,
-        ["array_test"] : array_test
+        ["array_test"] : array_test,
+        ["object_test"] : object_test
     }
 )
 

@@ -54,40 +54,6 @@ const $ = string => cursor => {
     return Result(cursor.string, cursor.position, working_cursor.position);
 }
 
-const apply_predicate = predicate => cursor => (
-    predicate(cursor.current_char)
-    ? Result(cursor.string, cursor.position, cursor.position + 1)
-    : ParseError(cursor.string, "syntax error", cursor.position)
-)
-
-const mapchar = f => ch => f(ch.charCodeAt(0))
-
-const WRD = apply_predicate(
-    mapchar(
-        ch =>  (ch >= 65 && ch <= 90) || (ch >= 97 && ch <= 122)
-    )
-)
-
-const DIG = apply_predicate(
-    mapchar(
-        ch => (ch >= 48 && ch <= 57)
-    )
-)
-
-const WSP = apply_predicate(
-    mapchar(
-        ch => (ch >= 9 && ch <= 13) || ch == 32
-    )
-)
-
-const END = apply_predicate(
-    ch => ch == ""
-)
-
-const charset = (...chars) => apply_predicate(
-    ch => chars.indexOf(ch) >= 0
-)
-
 const either = (...parsers) => cursor => {
     let min_position = (parsers.length > 0) ? Number.MAX_SAFE_INTEGER : cursor.position;
     for(let p of parsers){
@@ -199,10 +165,6 @@ const map = f => parser => cursor => {
     )
 }
 
-const tag = label => map(
-    value => ({label, value})
-)
-
 function parser_refrence(){
     let slot = [];
     return [
@@ -212,5 +174,5 @@ function parser_refrence(){
 }
 
 export {
-    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag, parser_refrence
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, parser_refrence
 };
