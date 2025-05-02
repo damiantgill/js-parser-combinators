@@ -1,5 +1,21 @@
 function trace(v){ console.log(v); return v} //inline log for debugging
 
+class ResultList extends Array{
+    constructor(){
+        super();
+    }
+
+    append(item){
+        if(item instanceof ResultList){
+            for(let i=0; i < item.length; i++){
+                this.push(item[i])
+            }
+        }else{
+            this.push(item);
+        }
+    }
+}
+
 const ParseError = (string, error, position) => ({
     string, error, position, cursor:null
 })
@@ -115,8 +131,8 @@ const sequence = (...parsers) => cursor => {
         if(isError(result)){
             return result;
         }else if(result.value != EMPTY){
-            value = (value == EMPTY) ? [] : value;
-            value.push(result.value);
+            value = (value == EMPTY) ? new ResultList : value;
+            value.append(result.value);
         }
 
         current_cursor.position = result.end_position
@@ -155,8 +171,8 @@ const repeat = (min = 1, max = MAX) => parser => cursor => {
         }else if (max <= 0){
             return ParseError(current_cursor.string, "syntax error", current_cursor.position);
         }else if(result.value != EMPTY){
-            value = (value == EMPTY) ? [] : value;
-            value.push(result.value);
+            value = (value == EMPTY) ? new ResultList : value;
+            value.append(result.value);
         }
 
         current_cursor.position = result.end_position
@@ -187,6 +203,14 @@ const tag = label => map(
     value => ({label, value})
 )
 
+function parser_refrence(){
+    let slot = [];
+    return [
+        cursor => slot[0](cursor),
+        parser => slot[0] = parser
+    ]
+}
+
 export {
-    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag, parser_refrence
 };

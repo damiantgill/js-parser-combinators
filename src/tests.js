@@ -337,7 +337,7 @@ const capture_test = [
             )
         ),
         string: "<cat><dog><bird><dog>",
-        assess: (result) => !isError(result)  && compare_objects(result.value, [['cat'],['dog'],['bird'],['dog']])
+        assess: (result) => !isError(result)  && compare_objects(result.value, ['cat','dog','bird','dog'])
     },
     {
         parser: repeat()(
@@ -350,7 +350,7 @@ const capture_test = [
         string: "<cat><dog><bird><dog><!!>",
         assess: (result) => (
             !isError(result)
-            && compare_objects(result.value, [['dog'],['dog']])
+            && compare_objects(result.value, ['dog','dog'])
             && result.match == "<cat><dog><bird><dog>"
         )
     }

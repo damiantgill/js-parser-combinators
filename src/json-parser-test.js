@@ -144,6 +144,8 @@ const number_test = [
 
 
 const compare_list = (l1,l2) => {
+    //trace(l1)
+    //trace(l1.length)
     if(l1.length != l2.length){
         return false
     }
@@ -160,7 +162,7 @@ const array_test = [
     {
         parser: json_array_parser,
         string: "[1,2,3,4,5]",
-        assess: (result) => value_compare(result.value, [1,2,3,4,5])
+        assess: (result) => compare_list(result.value, [1,2,3,4,5])
     },
     {
         parser: json_array_parser,
@@ -189,6 +191,16 @@ const array_test = [
     },
     {
         parser: json_array_parser,
+        string: "[[[]]]",
+        assess: (result) => value_compare(result.value, [[[]]])
+    },
+    {
+        parser: json_array_parser,
+        string: "[[],[[]],[[],[]]]",
+        assess: (result) => value_compare(result.value, [[], [[]], [[],[]]])
+    },
+    {
+        parser: json_array_parser,
         string: "[100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175]",
         assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
     },
@@ -214,8 +226,8 @@ const array_test = [
     },
     {
         parser: json_array_parser,
-        string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5]',
-        assess: (result) => value_compare(trace(result.value), ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5])
+        string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] ,"🙃", 5]',
+        assess: (result) => value_compare(result.value, ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , "🙃", 5])
     }   
 ]
 

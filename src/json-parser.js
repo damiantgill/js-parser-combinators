@@ -1,12 +1,7 @@
 import {
-    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, END, charset, apply_predicate, mapchar, log, tag
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, WRD, DIG, WSP, END, charset, apply_predicate, mapchar, log, tag, parser_refrence
 } from "./parser.js";
 function trace(v){ console.log(v); return v} //inline log for debugging
-const flatten = (n=1) => map(v => (
-    Array.isArray(v)
-    ? v.flat(n)
-    : v
-));
 
 const spaces = repeat(0)(WSP);
 const one_to_nine = ["1","2","3","4","5","6","7","8","9"]
@@ -47,36 +42,26 @@ const as_value = value => parser => cursor => {
     )
 }
 
-const wrap = (left, content, right) => map(v=>v[0])(sequence(left, content, right));
-
 const json_string = capture(repeat(0)(string_chars));
-
-
-function parser_refrence(){
-    let inner_slot = [];
-    return [
-        cursor => inner_slot[0](cursor),
-        parser => inner_slot[0] = parser
-    ]
-}
+const json_string_val = sequence($('"'), json_string, $('"'));
 
 const [json_array, set_json_array_ref] = parser_refrence();
 const json_value = either(
-    wrap($('"'), json_string, $('"')),
+    json_string_val,
     number,
-    json_array
+    $('true'),
+    $('false'),
+    $('null'),
+    json_array,
 )
 
-const extract = map(v=>v[0])
-
-const element = wrap(spaces, json_value, spaces)
-//[[],1]
-const list = seperator => parser => map(v => [v[0],...(v[1] ? v[1] : [])])(sequence(parser, repeat(0)(extract(sequence(seperator, parser)))))
+const element = sequence(spaces, json_value, spaces)
+const list = seperator => parser => sequence(parser, repeat(0)(sequence(seperator, parser)))
 
 const elements = list($(','))(element);
 
 const empty_array = as_value([])(sequence($('['), spaces ,$(']')));
-const array = wrap($('['), elements ,$(']'));
+const array = map(v=>[...v])(sequence($('['), elements ,$(']')));
 const json_array_parser = either(
     empty_array,
     array
