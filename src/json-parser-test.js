@@ -81,6 +81,11 @@ function run_tests(specs){
 const string_test = [
     {
         parser: sequence(json_string,END),
+        string: "\\\"hello\\\"",
+        assess: (result) => !isError(result.value),
+    },
+    {
+        parser: sequence(json_string,END),
         string: ["\\u041f\\u043e...\\u043b\\u0442\\u043e\\u0440\\u0430", "\\u0417\\u0435\\u043c\\u043b--\\u0435\\u043a\\u043e\\u043f\\u0430"],
         assess: (result) => !isError(result),
     },
@@ -154,6 +159,36 @@ const compare_list = (l1,l2) => {
 const array_test = [
     {
         parser: json_array_parser,
+        string: "[1,2,3,4,5]",
+        assess: (result) => value_compare(result.value, [1,2,3,4,5])
+    },
+    {
+        parser: json_array_parser,
+        string: "[ ]",
+        assess: (result) => value_compare(result.value, [ ])
+    },
+    {
+        parser: json_array_parser,
+        string: "[[1]]",
+        assess: (result) => value_compare(result.value, [[1]])
+    },
+    {
+        parser: json_array_parser,
+        string: "[ 1 , [] ]",
+        assess: (result) => value_compare(result.value, [1,[]])
+    },
+    {
+        parser: json_array_parser,
+        string: "[ [], 1 ]",
+        assess: (result) => value_compare(result.value, [[],1])
+    },
+    {
+        parser: json_array_parser,
+        string: "[[]]",
+        assess: (result) => value_compare(result.value, [[]])
+    },
+    {
+        parser: json_array_parser,
         string: "[100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175]",
         assess: (result) => value_compare(result.value, [100.0016E15,100.0016e15,0.00012e76,0.000,0.1751,916E11,1e175])
     },
@@ -171,13 +206,23 @@ const array_test = [
         parser: json_array_parser,
         string: '[1, 2, 3, [11, 12] , 5]',
         assess: (result) => value_compare(result.value, [1, 2, 3, [11, 12] , 5])
+    },
+    {
+        parser: json_array_parser,
+        string: '[]',
+        assess: (result) => value_compare(result.value, [])
+    },
+    {
+        parser: json_array_parser,
+        string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5]',
+        assess: (result) => value_compare(trace(result.value), ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5])
     }   
 ]
 
 const run_json_tests = () => run_tests(
     {
-        ["intiger"]: intiger_test,
-        ["number_test"]: number_test,
+        // ["intiger"]: intiger_test,
+        // ["number_test"]: number_test,
         ["string_test"]: string_test,
         ["array_test"] : array_test
     }

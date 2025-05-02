@@ -188,5 +188,5 @@ const tag = label => map(
 )
 
 export {
-    Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, WRD, apply_predicate, mapchar, DIG, WSP, END, charset, tag
 };
