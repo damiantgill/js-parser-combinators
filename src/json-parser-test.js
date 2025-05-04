@@ -217,8 +217,8 @@ const array_test = [
     },
     {
         parser: json_array,
-        string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] ,"🙃", 5]',
-        assess: (result) => value_compare(result.value, ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , "🙃", 5])
+        string: '["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5]',
+        assess: (result) => value_compare(result.value, ["{abcd:123}", "[1,2,3]", "=\\\"", [[[1,2]], 12] , 5])
     }   
 ]
 

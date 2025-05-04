@@ -6,9 +6,19 @@ import {apply_predicate, mapchar, WRD, WSP, END, charset, as_value} from "./pars
 //     HELPERS
 //------------------
 function trace(v){ console.log(v); return v} //inline log for debugging
+const unescaped = { ["\\"]:"\\", ["\""]:'"', ["\/"]:"\/", ["b"]:"\b", ["f"]:"\f", ["n"]:"\n", ["r"]:"\r", ["t"]:"\t"};
+function replace_chars (str){
+    const code = str[1];
+    if(code == "u"){
+        return String.fromCharCode(Number(parseInt(str.substring(2), 16)));
+    }else{
+        return unescaped[code];
+    }
+}
+const unescape_chars = s => s.replaceAll(/\\u....|\\[t\\\/bfnrt"]/g, replace_chars);
+const [json_value, set_json_value_ref] = parser_refrence();
 const list = seperator => parser => sequence(parser, repeat(0)(sequence(seperator, parser)))
 const spaces = repeat(0)(WSP);
-const [json_value, set_json_value_ref] = parser_refrence();
 
 //------------------
 //     NUMBER
@@ -41,7 +51,7 @@ const string_chars  = (
         sequence($('\\u'),hex, hex, hex, hex)
     )
 );
-const json_string      = map(v=>v)(capture(repeat(0)(string_chars)));
+const json_string      = map(unescape_chars)(capture(repeat(0)(string_chars)));
 const json_string_val  = either(
     as_value("")(sequence($('"'),$('"'))),
     sequence($('"'), json_string, $('"'))
