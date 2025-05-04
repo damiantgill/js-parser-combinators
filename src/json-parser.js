@@ -1,4 +1,4 @@
-import {$, either, not, sequence, repeat, option, capture, map, log, parser_refrence} from "./parser.js";
+import {$, either, not, sequence, repeat, option, capture, map, log, parser_refrence, string_parser} from "./parser.js";
 import {apply_predicate, mapchar, WRD, WSP, END, charset, as_value} from "./parser-helpers.js";
 
 
@@ -15,18 +15,18 @@ const [json_value, set_json_value_ref] = parser_refrence();
 //------------------
 const one_to_nine  = ["1","2","3","4","5","6","7","8","9"]
 const zero         = $('0');
-const sign         = charset("-", "+");
+const sign         = option(charset('+','-'));
 const onenine      = charset(...one_to_nine)
 const digit        = charset("0",...one_to_nine);
 const digits       = repeat()(digit);
 const integer      = (
     either(
-        sequence(option(sign), zero),
-        sequence(option(sign), onenine, option(digits))
+        sequence(option($("-")), zero),
+        sequence(option($("-")), onenine, option(digits))
     )
 );
 const fraction  = sequence($("."), digits);
-const exponent  = sequence(charset('E','e'),integer)
+const exponent  = sequence(charset('E','e'), sign, digits)
 const number    = map(Number)(capture(sequence(integer, option(fraction), option(exponent))));
 
 //------------------
@@ -37,19 +37,15 @@ const hex           = charset("0",...one_to_nine,"a","A","b","B", "c", "C", "d",
 const string_chars  = (
     either(
         string_uchar,
-        $('\\\\'),
-        $('\\\"'),
-        $('\\/'),
-        $('\\b'),
-        $('\\f'),
-        $('\\n'),
-        $('\\r'),
-        $('\\t'),
+        $('\\\\'), $('\\\"'), $('\\/'),$('\\b'),$('\\f'),$('\\n'),$('\\r'),$('\\t'),
         sequence($('\\u'),hex, hex, hex, hex)
     )
 );
 const json_string      = capture(repeat(0)(string_chars));
-const json_string_val  = sequence($('"'), json_string, $('"'));
+const json_string_val  = either(
+    sequence($('"'),$('"')),
+    sequence($('"'), json_string, $('"'))
+);
 
 //------------------
 //     ARRAY
@@ -95,4 +91,6 @@ set_json_value_ref(
     )
 );
 
-export {json_string, integer, number, json_value, json_array, member, json_object}
+const json_parse = string_parser(sequence(element,END));
+
+export {json_string, integer, number, json_value, json_array, member, json_object, element, json_parse}

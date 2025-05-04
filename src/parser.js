@@ -173,6 +173,11 @@ function parser_refrence(){
     ]
 }
 
+function string_parser(parser){
+    const root_parser = map(v => (v instanceof ResultList) ? v[0]: v)(parser);
+    return string => root_parser(Cursor(string));
+}
+
 export {
-    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, parser_refrence
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, parser_refrence, string_parser
 };

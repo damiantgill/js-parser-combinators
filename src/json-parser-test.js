@@ -1,12 +1,12 @@
 import {Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log} from "./parser.js";
 import {apply_predicate, mapchar, WRD, WSP, END, charset} from "./parser-helpers.js";
-import {json_string, integer, number, json_value, json_array, member, json_object} from "./json-parser.js";
+import {json_string, integer, number, json_value, json_array, member, json_object, element, json_parse} from "./json-parser.js";
 
 function trace(v){ console.log(v); return v} //inline log for debugging
 
 const isScalar = (object) => object == null || typeof object != "object";
 
-function  value_compare(value1, value2){
+function value_compare(value1, value2){
     if(isScalar(value1) != isScalar(value2)) return false;
 
     if(isScalar(value1) && isScalar(value2)) return value1 === value2;
@@ -100,20 +100,26 @@ const string_test = [
 const intiger_test = [
     {
         parser: sequence(integer,END),
-        string: ["1","0","11", "+0", "+1", "-0", "-2", "+514324", "-972611000"],
+        string: ["1","0","11", "-0", "1", "-0", "-2", "514324", "-972611000"],
         assess: (result) => !isError(result),
     },
     {
         parser: sequence(integer,END),
-        string: ["01","-001", "+0014", "abc", "-cde"],
+        string: ["01","-001", "0014", "abc", "-cde"],
         assess: (result) => isError(result)
     }
 ]
 
+//[0e+1]
 const number_test = [
     {
         parser: sequence(number,END),
-        string: ["1","0","11", "+0", "+1", "-0", "-2", "+514324", "-972611000"],
+        string: "1e+12",
+        assess: (result) => !isError(result),
+    },
+    {
+        parser: sequence(number,END),
+        string: ["1","0","11", "0", "1", "-0", "-2", "0e+1", "514324", "-972611000"],
         assess: (result) => !isError(result),
     },
     {
@@ -123,12 +129,12 @@ const number_test = [
     },
     {
         parser: sequence(number,END),
-        string: ["1.00323","0.001","11.7500", "+0.132", "+1.6", "-0.7", "-2.451301", "+514324.4", "-972611000.00"],
+        string: ["1.00323","0.001","11.7500", "-0.132", "1.6", "-0.7", "-2.451301", "514324.4", "-972611000.00"],
         assess: (result) => !isError(result),
     },
     {
         parser: sequence(number,END),
-        string: ["01","-001.4324", "+01.001", "hello.15", "-goodby"],
+        string: ["01","-001.4324", "01.001", "hello.15", "-goodby"],
         assess: (result) => isError(result)
     },
     {
@@ -138,30 +144,21 @@ const number_test = [
     }
 ]
 
-
-const compare_list = (l1,l2) => {
-    if(l1.length != l2.length){
-        return false
-    }
-
-    for(let i=0; i < l1.length; i++){
-        if(l1[i] != l2[i]){
-            return false;
-        }
-    }
-    return true;
-}
-
 const array_test = [
     {
         parser: json_array,
         string: "[1,2,3,4,5]",
-        assess: (result) => compare_list(result.value, [1,2,3,4,5])
+        assess: (result) => value_compare(result.value, [1,2,3,4,5])
     },
     {
         parser: json_array,
         string: "[ ]",
         assess: (result) => value_compare(result.value, [ ])
+    },
+    {
+        parser: json_array,
+        string: "[[]   ]",
+        assess: (result) => value_compare(result.value, [[]])
     },
     {
         parser: json_array,
@@ -254,13 +251,42 @@ const object_test = [
     }
 ];
 
+const json_parse_test = [
+    {
+        parser: element,
+        string: `  { } `,
+        assess: (result) => value_compare(result.value[0], {})
+    },
+    {
+        parser: sequence(element,END),
+        string: `  [""], `,
+        assess: (result) => isError(result)
+    },
+    {
+        parser: element,
+        string: `  [  1,2,    3,    \n4]`,
+        assess: (result) => value_compare(result.value[0], [1,2,3,4])
+    },
+    {
+        parser: element,
+        string: '{"p1": {}, "p_2": [1.20, -15.33, 0, -0]}',
+        assess: (result) => value_compare(result.value[0], {p1: {}, p_2: [1.20, -15.33, +0, -0]})
+    },
+    {
+        parser: element,
+        string: "[[]   ]",
+        assess: (result) => value_compare(result.value[0], [[]])
+    },
+];
+
 const run_json_tests = () => run_tests(
     {
-        ["intiger"]: intiger_test,
-        ["number_test"]: number_test,
-        ["string_test"]: string_test,
-        ["array_test"] : array_test,
-        ["object_test"] : object_test
+        ["intiger"]          : intiger_test,
+        ["number_test"]      : number_test,
+        ["string_test"]      : string_test,
+        ["array_test"]       : array_test,
+        ["object_test"]      : object_test,
+        ["json_parse_test"]  : json_parse_test
     }
 )
 

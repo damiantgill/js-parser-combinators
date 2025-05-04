@@ -20,11 +20,18 @@ const DIG = apply_predicate(
     )
 )
 
+// const WSP = apply_predicate(
+//     mapchar(
+//         ch => (ch >= 9 && ch <= 13) || ch == 32
+//     )
+// )
+
 const WSP = apply_predicate(
     mapchar(
-        ch => (ch >= 9 && ch <= 13) || ch == 32
+        ch => ch != 12 &&(ch >= 9 && ch <= 13) || ch == 32
     )
 )
+
 
 const END = apply_predicate(
     ch => ch == ""
