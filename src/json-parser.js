@@ -41,9 +41,9 @@ const string_chars  = (
         sequence($('\\u'),hex, hex, hex, hex)
     )
 );
-const json_string      = capture(repeat(0)(string_chars));
+const json_string      = map(v=>v)(capture(repeat(0)(string_chars)));
 const json_string_val  = either(
-    sequence($('"'),$('"')),
+    as_value("")(sequence($('"'),$('"'))),
     sequence($('"'), json_string, $('"'))
 );
 
@@ -83,9 +83,9 @@ set_json_value_ref(
     either(
         json_string_val,
         number,
-        $('true'),
-        $('false'),
-        $('null'),
+        as_value(true)($('true')),
+        as_value(false)($('false')),
+        as_value(null)($('null')),
         json_array,
         json_object
     )

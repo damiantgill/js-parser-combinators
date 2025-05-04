@@ -277,6 +277,11 @@ const json_parse_test = [
         string: "[[]   ]",
         assess: (result) => value_compare(result.value[0], [[]])
     },
+    {
+        parser: element,
+        string: "[\"\"]",
+        assess: (result) => value_compare(result.value[0], [""])
+    },
 ];
 
 const run_json_tests = () => run_tests(
