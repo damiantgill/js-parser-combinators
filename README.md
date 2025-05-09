@@ -26,7 +26,7 @@ console.log(number_from_string('-0.053').value); //.......returns the value -0.0
 ```
 
 ## About this library
-The intent of this project was to experiment with parser combinators. Though the sample JSON parser, for instance, was able to pass a fairly extensive [suit of tests](https://github.com/nst/JSONTestSuite)[^1][^2], this library is not intended for production use. As well, the documentation that follows is not intended to be exhaustive. Also, while the coding style is for the most part in functional style, there are a few places where I was a bit naughty... whatchagonadoo!
+The intent of this project was to experiment with parser combinators. Though the sample [JSON parser](https://github.com/damiantgill/js-parser-combinators/blob/main/src/examples/json-parser.js), for instance, was able to pass a fairly extensive [suit of tests](https://github.com/nst/JSONTestSuite)[^1][^2], this library is not intended for production use. As well, the documentation that follows is not intended to be exhaustive. Also, while the coding style is for the most part in functional style, there are a few places where I was a bit naughty... whatchagonadoo!
 
 [^1]: Tested with the y and n tests (the optional i tests were omitted).
 [^2]: Two tests involving pathalogical nesting (several thousand levels) caused exceptions. These were ***n_structure_100000_opening_arrays.json*** and ***n_structure_open_array_object.json***
@@ -225,3 +225,44 @@ let count_creatures = map(map_count)(catch_creatures);
 //value = {dog: 3, lizard: 2}
 console.log(string_parser(count_creatures)('(dog)(lizard)(dog)(lizard)(dog)'))
 ```
+
+### Recussive Parsing
+To deal with recursive parsing expressions, the library provides the **parser_refrence : () → [reference, setter]** . This function generates a forward reference that can be updated later in the code.
+
+```javascript
+import {
+    $, string_parser, either, sequence, option,repeat, parser_refrence
+} from "./js-parser-combinators/src/parser.js";
+
+let digits_1to9 = either( $('1'),$('2'),$('3'),$('4'),$('5'),$('6'),$('7'),$('8'),$('9'));
+let digits_0to9 = either($('0'), digits_1to9);
+let zero = $("0");
+
+let integer = either(
+    zero,
+    sequence(digits_1to9, repeat(0)(digits_0to9))
+);
+
+//here we define the forward reference
+let [expression, set_expression_ref] = parser_refrence();
+
+let paren = sequence($('('), expression,  $(')'));
+
+//here we set the reference
+set_expression_ref(
+    either(
+        sequence(integer, option(sequence($(','), expression))),
+        sequence(paren, option(sequence($(','), expression)))
+    )
+)
+
+let expression_parser = string_parser(expression);
+console.log(expression_parser('10,0,456,78')); //succeeds
+console.log(expression_parser('(1,(2,3)),(4)')); //succeeds
+console.log(expression_parser('0, (13,400,51),((0,15)),100')); //succeeds
+console.log(expression_parser('((2),(3,4)')); //fails — missing paren!
+```
+## Full Examples
+This repository contains a full [JSON](https://github.com/damiantgill/js-parser-combinators/blob/main/src/examples/json-parser.js) parser implemented using this library. It is capable of parsing most JSON files (assuming they are not pathologically nested > 1000 levels) and converting them to Javascript values. This includes the translation of JSON Unicode escapes into native Javascript string codepionts.
+
+There is also a simple arithmetic [expression parser](https://github.com/damiantgill/js-parser-combinators/blob/main/src/examples/expression-parser.js) that both parsers and calculates the expression result.
