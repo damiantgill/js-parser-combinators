@@ -1,5 +1,5 @@
-import {Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log} from "./parser.js";
-import {apply_predicate, mapchar, WRD, WSP, END, charset, as_value, tag} from "./parser-helpers.js";
+import {Cursor, ParseError, isError, $, either, not, sequence, repeat, option, capture, map, log, END} from "../parser.js";
+import {apply_predicate, mapchar, WRD, WSP, charset, as_value, tag} from "../parser-helpers.js";
 
 function trace(v){ console.log(v); return v} //inline log for debugging
 const compare_objects = (o1,o2) => JSON.stringify(o1) == JSON.stringify(o2);
@@ -166,6 +166,16 @@ const sequence_test = [
         string: "hello-world",
         assess: (result) => isError(result)
     },
+    {
+        parser: sequence($("hello"),$(" "), $("world"), END),
+        string: "hello world",
+        assess: (result) => !isError(result)
+    },
+    {
+        parser: sequence($("hello"),$(" "), $("world"), END),
+        string: "hello world!!",
+        assess: (result) => isError(result)
+    }
 ];
 
 //-------------------------
@@ -258,6 +268,11 @@ const combined_test = [
         parser: repeat(1)(cat_dog_bird_tag),
         string: "<cat><dog><pig><bird><dog>",
         assess: (result) => !isError(result) && result.match == "<cat><dog>"
+    },
+    {
+        parser: sequence(repeat(1)(cat_dog_bird_tag), END),
+        string: "<cat><dog><pig><bird><dog>",
+        assess: (result) => isError(result)
     },
     {
         parser: repeat(1)(

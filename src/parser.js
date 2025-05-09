@@ -174,10 +174,27 @@ function parser_refrence(){
 }
 
 function string_parser(parser){
-    const root_parser = map(v => (v instanceof ResultList) ? v[0]: v)(parser);
+    const root_parser = (
+        map(v => (
+                !(v instanceof ResultList)
+                ? v
+                : v.length > 1
+                ? [...v]
+                : v[0]
+            )
+        )
+        (parser)
+    );
     return string => root_parser(Cursor(string));
 }
 
+const END = cursor => (
+    cursor.current_char == ""
+    ? Result(cursor.string, cursor.position, cursor.position)
+    : ParseError(cursor.string, "unparsed string remaining!", cursor.position)
+)
+
+
 export {
-    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, parser_refrence, string_parser
+    Cursor, ParseError, Result, isError, $, either, not, sequence, repeat, option, capture, map, log, END, parser_refrence, string_parser
 };

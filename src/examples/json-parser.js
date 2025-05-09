@@ -1,5 +1,5 @@
-import {$, either, not, sequence, repeat, option, capture, map, log, parser_refrence, string_parser} from "./parser.js";
-import {apply_predicate, mapchar, WRD, WSP, END, charset, as_value} from "./parser-helpers.js";
+import {$, either, not, sequence, repeat, option, capture, map, log, parser_refrence, string_parser, END} from "../parser.js";
+import {apply_predicate, mapchar, WRD, WSP, charset, as_value} from "../parser-helpers.js";
 
 
 //------------------
@@ -47,7 +47,7 @@ const hex           = charset("0",...one_to_nine,"a","A","b","B", "c", "C", "d",
 const string_chars  = (
     either(
         string_uchar,
-        $('\\\\'), $('\\\"'), $('\\/'),$('\\b'),$('\\f'),$('\\n'),$('\\r'),$('\\t'),
+        ...['\\\\', '\\\"', '\\/','\\b','\\f','\\n','\\r','\\t'].map($),
         sequence($('\\u'),hex, hex, hex, hex)
     )
 );

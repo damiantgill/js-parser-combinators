@@ -1,0 +1,5 @@
+The included tests taken from https://github.com/nst/JSONTestSuite (MIT License Copyright (c) 2016 — Nicolas Seriot). They have been included for convenience.
+
+Thank You Nicolas!
+
+
