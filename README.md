@@ -26,7 +26,7 @@ console.log(number_from_string('-0.053').value); //.......returns the value -0.0
 ```
 
 ## About this library
-The intent of this project was to experiment with parser combinators. Though the sample [JSON parser](https://github.com/damiantgill/js-parser-combinators/blob/main/src/examples/json-parser.js), for instance, was able to pass a fairly extensive [suit of tests](https://github.com/nst/JSONTestSuite)[^1][^2], this library is not intended for production use. As well, the documentation that follows is not intended to be exhaustive. Also, while the coding style is for the most part in functional style, there are a few places where I was a bit naughty... whatchagonadoo!
+The intent of this project was to experiment with parser combinators. Though the sample [JSON parser](https://github.com/damiantgill/js-parser-combinators/blob/main/src/examples/json-parser.js), for instance, was able to pass a fairly extensive [suit of tests](https://github.com/nst/JSONTestSuite)[^1][^2], this library is not intended for production use. As well, the documentation that follows is not intended to be exhaustive.
 
 [^1]: Tested with the y and n tests (the optional i tests were omitted).
 [^2]: Two tests involving pathalogical nesting (several thousand levels) caused exceptions. These were ***n_structure_100000_opening_arrays.json*** and ***n_structure_open_array_object.json***
@@ -38,7 +38,7 @@ Parser combinators are higher order functions that ultimately take one or more p
 
 Parsers in this library do not take strings directly but a **Cursor** which holds a string and a position within the string. Parsers output a **Result** or **ParseError** data structure depending on the success or failure of the parsing process. The function signature of a parser is **Cursor → Result**. Result objects may or may not hold and values captured in the parsing process (we will get to that later).
 
-The code below employs **$** to generate a parser recognising a particular string. In this way it can be thought of as a parametric parser whose complete signature is ***String → Cursor → Result***.
+The code below employs **$** to generate a parser recognising a particular string. In this way it can be thought of as a parametric parser whose complete signature is ***String → Parser***.
 ```javascript
 import {Cursor, $} from "./parser.js";
 //defines a simple token literal parser: $: string → Cursor → Result
@@ -66,7 +66,7 @@ console.log(hello_string_parser('hello'));
 > Once you have wrapped a parser in ***string_parser*** it is no longer composable. This is intended to be a finishing step , making the final parser a little more convenient to use.
 
 ### The Combinators
-There are four fundamental parser combinators. The first is **either** : ***([parsers] → Cursor → Result)***, which takes two or more parsers and returns the first successful result.
+There are four fundamental parser combinators. The first is **either** : ***([parsers] → Parser)***, which takes two or more parsers and returns the first successful result.
 
 ```javascript
 import {$, string_parser, either} from "./parser.js";
@@ -80,7 +80,7 @@ console.log(cow_dog_string('dog')); //its a dog!;
 console.log(cow_dog_string('pig')); //its a... error!;
 ```
 
-The next is **sequence** : ***([parsers] → Cursor → Result)***, which takes a series of parsers and performs them in sequential order.
+The next is **sequence** : ***([parsers] → Parser)***, which takes a series of parsers and performs them in sequential order.
 ```javascript
 import {$, string_parser, either, sequence} from "./parser.js";
 
@@ -115,7 +115,7 @@ console.log(psycho_with_end('Psychoalphadiscobetabioaquadoloop'));
 console.log(psycho_with_end('Psychoalphadisco')); //Succeeds
 ```
 
-The **option**  : ***(parser → Cursor → Result)*** combinator will not fail if no match is found.
+The **option**  : ***(Parser → Parser)*** combinator will not fail if no match is found.
 ```javascript
 let exclamation = option($('!'));
 let phrase = sequence($('The cow is grumpy', exclamation));
@@ -125,7 +125,7 @@ console.log(phrase_string_parser('The cow is grumpy!')); //succeeds;
 console.log(phrase_string_parser('The cow is grumpy')); //succeeds — the exclamation is optional;
 ```
 
-The **repeat** combinator is the most complicated. It is actually a parametric combinator, taking a min and optional max parameter before producing a combinator which can the combine parsers under the repetition operation. It's signature is ***(min, max) → [parsers] → Cursor → Result***.
+The **repeat** combinator is the most complicated. It is actually a parametric combinator, taking a min and optional max parameter before producing a combinator which can the combine parsers under the repetition operation. It's signature is ***(min, max) → [parsers] → Parser***.
 
 ```javascript
 import {$, string_parser, repeat} from "./parser.js";
