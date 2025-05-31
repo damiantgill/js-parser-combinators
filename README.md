@@ -95,7 +95,7 @@ console.log(question_string_parser('Why is your lizard wearing a cardigan?')); /
 console.log(question_string_parser('Why is your cow wearing a waistcoat?')); //fails!;
 ```
 > [!NOTE]
-> Parsers return a result as soon as a match is found. They will not parse to the end of the string by default. To force the parser to match against the entire string and explicit **END** token needs to be included.
+> Parsers return a result as soon as a match is found. They will not parse to the end of the string by default. To force the parser to match against the entire string an explicit **END** token needs to be included.
 
 ```javascript
 import {$, string_parser, either, sequence, END} from "./parser.js";
